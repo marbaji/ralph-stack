@@ -112,7 +112,7 @@ We checked whether the post-run deliverable-bug workflow had a convention we mis
 
 ## Do not
 
-- **Do not re-render the morning-report.** Read the persisted one. (Re-rendering from live state gives different answers than what was written at exit, defeating the point of this skill.)
+- **Do not re-render the post-run-report.** Read the persisted one. (Re-rendering from live state gives different answers than what was written at exit, defeating the point of this skill.)
 - **Do not edit files unless the user approves a recommendation.**
 - **Do not run long tests or builds inside the debrief.** Read files, quick `git log`, quick `pytest --co` at most.
 - **Do not invent bugs.** Only flag what the heuristic checks surface.

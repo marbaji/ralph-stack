@@ -65,7 +65,7 @@ def test_cli_init_missing_plan_file(tmp_path, monkeypatch, capsys):
     assert "not found" in err
 
 
-def test_debrief_no_morning_report(tmp_project: Path, capsys, monkeypatch):
+def test_debrief_no_post_run_report(tmp_project: Path, capsys, monkeypatch):
     monkeypatch.chdir(tmp_project)
     rc = main(["debrief"])
     captured = capsys.readouterr()
@@ -75,7 +75,7 @@ def test_debrief_no_morning_report(tmp_project: Path, capsys, monkeypatch):
 
 def test_debrief_prints_complete_report(tmp_project: Path, capsys, monkeypatch):
     monkeypatch.chdir(tmp_project)
-    (tmp_project / "ralph" / "morning-report.md").write_text(
+    (tmp_project / "ralph" / "post-run-report.md").write_text(
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
         "## Status: ✅ COMPLETE\n"

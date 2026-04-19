@@ -91,7 +91,7 @@ def test_write_complete_report_marks_incomplete_when_boxes_remain(tmp_path, monk
 
     _write_complete_report(paths, plan)
 
-    report = paths.morning_report.read_text()
+    report = paths.post_run_report.read_text()
     assert "❌ INCOMPLETE" in report
     assert "3/5" in report
     assert "2 checkboxes still unchecked" in report
@@ -109,7 +109,7 @@ def test_write_complete_report_marks_complete_when_all_boxes_done(tmp_path, monk
 
     _write_complete_report(paths, plan)
 
-    report = paths.morning_report.read_text()
+    report = paths.post_run_report.read_text()
     assert "✅ COMPLETE" in report
     assert "3/3" in report
     assert "INCOMPLETE" not in report
@@ -139,7 +139,7 @@ def test_write_complete_report_finds_plan_after_ralphex_moves_it(tmp_path, monke
 
     _write_complete_report(paths, original_plan)
 
-    report = paths.morning_report.read_text()
+    report = paths.post_run_report.read_text()
     assert "✅ COMPLETE" in report
     assert "3/3" in report
     assert "0/0" not in report

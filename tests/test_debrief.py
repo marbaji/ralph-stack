@@ -9,17 +9,17 @@ import pytest
 from ralph_stack.debrief import (
     find_unverified_drafts,
     heuristic_flags,
-    parse_morning_report,
+    parse_post_run_report,
     render_debrief,
     tail_progress_log,
 )
 from ralph_stack.paths import ProjectPaths
 
 
-# ---- parse_morning_report ---------------------------------------------------
+# ---- parse_post_run_report ---------------------------------------------------
 
 
-def test_parse_morning_report_complete():
+def test_parse_post_run_report_complete():
     text = (
         "# Ralph Run — plan_2026-04-19-init — 2026-04-19\n"
         "\n"
@@ -30,7 +30,7 @@ def test_parse_morning_report_complete():
         "- Iterations: 16\n"
         "- Commits: 16 (branch: feat/ralph-stack-dogfood)\n"
     )
-    parsed = parse_morning_report(text)
+    parsed = parse_post_run_report(text)
     assert parsed["status"] == "COMPLETE"
     assert parsed["plan_basename"] == "plan_2026-04-19-init"
     assert parsed["date"] == "2026-04-19"
@@ -40,7 +40,7 @@ def test_parse_morning_report_complete():
     assert parsed["branch"] == "feat/ralph-stack-dogfood"
 
 
-def test_parse_morning_report_incomplete():
+def test_parse_post_run_report_incomplete():
     text = (
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
@@ -51,13 +51,13 @@ def test_parse_morning_report_incomplete():
         "- Iterations: 4\n"
         "- Commits: 4 (branch: feat/demo)\n"
     )
-    parsed = parse_morning_report(text)
+    parsed = parse_post_run_report(text)
     assert parsed["status"] == "INCOMPLETE"
     assert parsed["checkboxes_done"] == 3
     assert parsed["checkboxes_total"] == 5
 
 
-def test_parse_morning_report_paused():
+def test_parse_post_run_report_paused():
     text = (
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
@@ -68,7 +68,7 @@ def test_parse_morning_report_paused():
         "- Iterations: 7\n"
         "- Commits: 7 (branch: feat/demo)\n"
     )
-    parsed = parse_morning_report(text)
+    parsed = parse_post_run_report(text)
     assert parsed["status"] == "PAUSED"
 
 
@@ -209,7 +209,7 @@ def test_heuristic_flags_none_for_clean_complete(tmp_path):
 # ---- render_debrief ---------------------------------------------------------
 
 
-def test_render_debrief_missing_morning_report(tmp_path):
+def test_render_debrief_missing_post_run_report(tmp_path):
     paths = ProjectPaths(root=tmp_path)
     paths.ensure_dirs()
     with pytest.raises(FileNotFoundError):
@@ -220,7 +220,7 @@ def test_render_debrief_complete_run(tmp_path):
     _init_repo_with_commit(tmp_path, "c1")
     paths = ProjectPaths(root=tmp_path)
     paths.ensure_dirs()
-    paths.morning_report.write_text(
+    paths.post_run_report.write_text(
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
         "## Status: ✅ COMPLETE\n"
@@ -242,7 +242,7 @@ def test_render_debrief_incomplete_tails_progress_log(tmp_path):
     _init_repo_with_commit(tmp_path, "c1")
     paths = ProjectPaths(root=tmp_path)
     paths.ensure_dirs()
-    paths.morning_report.write_text(
+    paths.post_run_report.write_text(
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
         "## Status: ❌ INCOMPLETE (2 checkboxes still unchecked)\n"
@@ -267,7 +267,7 @@ def test_render_debrief_surfaces_unverified_drafts(tmp_path):
     _init_repo_with_commit(tmp_path, "c1")
     paths = ProjectPaths(root=tmp_path)
     paths.ensure_dirs()
-    paths.morning_report.write_text(
+    paths.post_run_report.write_text(
         "# Ralph Run — plan_demo — 2026-04-19\n"
         "\n"
         "## Status: ✅ COMPLETE\n"

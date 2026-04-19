@@ -1,9 +1,9 @@
 ---
 name: ralph
-description: Start, resume, or inspect an overnight ralph-stack run. Use when the user says "ralph run <plan>", "ralph status", or "ralph report". Thin wrapper around the ralph-stack CLI.
+description: Start, resume, or inspect a ralph-stack run. Use when the user says "ralph run <plan>", "ralph status", or "ralph report". Thin wrapper around the ralph-stack CLI.
 ---
 
-# /ralph — overnight ralph loop
+# /ralph — ralph loop
 
 This skill is a thin wrapper around the `ralph-stack` CLI. All logic lives in that CLI; this skill just validates inputs and shells out.
 
@@ -13,7 +13,7 @@ This skill is a thin wrapper around the `ralph-stack` CLI. All logic lives in th
 
 ### /ralph run <plan-path>
 
-Start a new overnight run.
+Start a new run.
 
 1. Verify the plan path exists and is a markdown file.
 2. Verify `ralph-stack` is installed (`which ralph-stack`).
@@ -30,7 +30,7 @@ Run `ralph-stack status` and summarize the output to the user.
 
 ### /ralph report
 
-Run `ralph-stack report` to regenerate the morning report, then read and present `./ralph/morning-report.md` to the user. If `## ⚠️ Unverified rules awaiting review` is present, call attention to it first.
+Run `ralph-stack report` to regenerate the post-run report, then read and present `./ralph/post-run-report.md` to the user. If `## ⚠️ Unverified rules awaiting review` is present, call attention to it first.
 
 ## Prerequisites
 

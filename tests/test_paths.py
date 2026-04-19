@@ -6,7 +6,7 @@ def test_project_paths(tmp_project: Path):
     p = ProjectPaths(root=tmp_project)
     assert p.state_file == tmp_project / "ralph" / "stuck-state.json"
     assert p.model_override == tmp_project / "ralph" / "next-iter-model.txt"
-    assert p.morning_report == tmp_project / "ralph" / "morning-report.md"
+    assert p.post_run_report == tmp_project / "ralph" / "post-run-report.md"
     assert p.stuck_dump == tmp_project / "ralph" / "stuck-dump.md"
     assert p.per_project_guardrails == tmp_project / "tasks" / "lessons.md"
 

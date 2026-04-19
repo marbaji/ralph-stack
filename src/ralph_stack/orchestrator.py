@@ -101,7 +101,7 @@ def _write_paused_report(
         iterations=state.current_iteration,
         unverified_rules=unverified or [],
     )
-    paths.morning_report.write_text(render_report(summary))
+    paths.post_run_report.write_text(render_report(summary))
 
 
 def run_until_done(paths: ProjectPaths, plan_path: Path) -> int:
@@ -132,7 +132,7 @@ def run_until_done(paths: ProjectPaths, plan_path: Path) -> int:
             if status == "paused":
                 print(
                     f"PAUSED at iter {StuckState.load(paths.state_file).current_iteration}. "
-                    f"See {paths.morning_report}"
+                    f"See {paths.post_run_report}"
                 )
                 return 0
             if runner.proc and runner.proc.poll() is not None:
@@ -176,7 +176,7 @@ def _write_complete_report(paths: ProjectPaths, plan_path: Path) -> None:
         iterations=state.current_iteration,
         branch=compute_branch_name(plan_path, _today()),
     )
-    paths.morning_report.write_text(render_report(summary))
+    paths.post_run_report.write_text(render_report(summary))
 
 
 def resume_run(paths: ProjectPaths) -> int:

@@ -1,11 +1,11 @@
 """Post-run debrief renderer — the deterministic half of `/ralph-review`.
 
-Reads the artifacts the orchestrator wrote at exit (``morning-report.md``,
+Reads the artifacts the orchestrator wrote at exit (``post-run-report.md``,
 ``combined-guardrails.md``, ``stuck-state.json``, and the per-plan progress
 log) and prints a four-section markdown summary:
 
 1. Status — status line + checkbox count + iterations + branch, parsed from
-   ``morning-report.md``.
+   ``post-run-report.md``.
 2. What happened — last ~40 lines of the progress log, included when the
    status is not ``COMPLETE`` so the reader sees why ralphex stopped.
 3. Unverified guardrails — draft rules awaiting human promote/edit/delete.
@@ -14,7 +14,7 @@ log) and prints a four-section markdown summary:
    unresolved escalation with a ``COMPLETE`` verdict, all plan boxes flipped
    but status ``INCOMPLETE``).
 
-This module is read-only — it never rewrites ``morning-report.md``. Agent
+This module is read-only — it never rewrites ``post-run-report.md``. Agent
 interpretation (which suspect flag to act on, drafting follow-up plans) lives
 in the ``/ralph-review`` skill on top of this output.
 """
@@ -32,8 +32,8 @@ from ralph_stack.paths import ProjectPaths
 TASK_COMMIT_PATTERN = re.compile(r"\b(task|step|iter|fix|feat|chore)\b", re.I)
 
 
-def parse_morning_report(text: str) -> dict:
-    """Extract status + progress fields from a ``morning-report.md`` body.
+def parse_post_run_report(text: str) -> dict:
+    """Extract status + progress fields from a ``post-run-report.md`` body.
 
     Returns a dict with keys: ``status`` (COMPLETE/INCOMPLETE/PAUSED/RUNNING),
     ``plan_basename``, ``date``, ``checkboxes_done``, ``checkboxes_total``,
@@ -180,7 +180,7 @@ def heuristic_flags(
 
     if report.get("checkboxes_total", 0) == 0 and _git_has_task_commits(cwd):
         flags.append(
-            "morning-report shows 0/0 checkboxes but git log has task-flavored commits — "
+            "post-run-report shows 0/0 checkboxes but git log has task-flavored commits — "
             "suspect plan moved before count (see known Bug 6)."
         )
 
@@ -242,18 +242,18 @@ def _find_progress_log(paths: ProjectPaths, plan_basename: str) -> Path | None:
 def render_debrief(paths: ProjectPaths) -> str:
     """Render the four-section debrief for the given project paths.
 
-    Raises ``FileNotFoundError`` if ``ralph/morning-report.md`` is absent —
+    Raises ``FileNotFoundError`` if ``ralph/post-run-report.md`` is absent —
     the orchestrator writes it at every run exit, so its absence means either
     a run is in progress (use ``ralph-stack status``) or nothing ran here.
     """
-    if not paths.morning_report.exists():
+    if not paths.post_run_report.exists():
         raise FileNotFoundError(
-            f"no completed run found at {paths.morning_report}. "
+            f"no completed run found at {paths.post_run_report}. "
             "If a run is in progress, try `ralph-stack status`."
         )
 
-    report_text = paths.morning_report.read_text()
-    report = parse_morning_report(report_text)
+    report_text = paths.post_run_report.read_text()
+    report = parse_post_run_report(report_text)
 
     stuck_state = _load_stuck_state(paths.state_file) if paths.state_file.exists() else None
 

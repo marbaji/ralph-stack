@@ -2,7 +2,7 @@
 # End-to-end synthetic dry-run exercising detector -> stuck-dump -> draft -> report.
 # Uses tests/fixtures/full_stuck_run.jsonl as a fake transcript, runs the full
 # decision/escalation pipeline, and verifies HUMAN_REQUIRED fires with the
-# expected morning report + lessons.md draft block.
+# expected post-run report + lessons.md draft block.
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -70,7 +70,7 @@ for it in iters:
             iterations=it.number,
             unverified_rules=draft_rules,
         )
-        paths.morning_report.write_text(render_report(s))
+        paths.post_run_report.write_text(render_report(s))
         break
 
 if human_required_iter is None:
@@ -79,8 +79,8 @@ print(f"\nHUMAN_REQUIRED fired at iter {human_required_iter.number}")
 PY
 
 echo "---"
-echo "morning report:"
-cat ralph/morning-report.md
+echo "post-run report:"
+cat ralph/post-run-report.md
 echo "---"
 echo "lessons.md:"
 cat tasks/lessons.md

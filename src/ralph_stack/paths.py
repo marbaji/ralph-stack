@@ -21,8 +21,8 @@ class ProjectPaths:
         return self.ralph_dir / "next-iter-model.txt"
 
     @property
-    def morning_report(self) -> Path:
-        return self.ralph_dir / "morning-report.md"
+    def post_run_report(self) -> Path:
+        return self.ralph_dir / "post-run-report.md"
 
     @property
     def stuck_dump(self) -> Path:

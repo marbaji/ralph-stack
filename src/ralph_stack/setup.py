@@ -26,7 +26,7 @@ Two-tier system:
 - This file: project-specific rules (e.g., "use pnpm not npm in this repo")
 - ~/.ralph/guardrails.md: universal rules that apply to every project
 
-When ralph gets stuck overnight, it drafts proposed rules here as:
+When ralph gets stuck during a run, it drafts proposed rules here as:
 
     ## ⚠️ Unverified (YYYY-MM-DD)
     - rule text

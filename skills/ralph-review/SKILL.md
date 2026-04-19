@@ -11,7 +11,7 @@ You are running a post-run debrief on a ralph-stack run. The deterministic half 
 
 The `ralph/` dir lives at `<ralph-stack-cwd>/ralph/` where `<ralph-stack-cwd>` is whatever directory the user was in when they invoked `ralph-stack run` (NOT necessarily the Python package root — ralph-stack uses `Path.cwd()` via `ProjectPaths`).
 
-Walk up from the current working directory until you find `ralph/morning-report.md`. If the user passed an explicit path (`/ralph-review /path/to/worktree`), use that directly. If nothing is found, stop with: `no ralph run to review in <cwd>`.
+Walk up from the current working directory until you find `ralph/post-run-report.md`. If the user passed an explicit path (`/ralph-review /path/to/worktree`), use that directly. If nothing is found, stop with: `no ralph run to review in <cwd>`.
 
 ## Step 1 — Run `ralph-stack debrief`
 
@@ -34,7 +34,7 @@ Use this output verbatim as your sections 1–4. Don't re-derive what the CLI al
 ### Section 5: Bug classification
 
 For each suspect flag from Section 4, decide:
-- **Orchestrator bug** (ralph-stack itself misbehaved) — the user is not expected to fix this from inside their project. Capture the flag + relevant context (morning-report excerpt, stuck-state snapshot, progress-log tail) and point the user at `https://github.com/marbaji/ralph-stack/issues` to file a report.
+- **Orchestrator bug** (ralph-stack itself misbehaved) — the user is not expected to fix this from inside their project. Capture the flag + relevant context (post-run-report excerpt, stuck-state snapshot, progress-log tail) and point the user at `https://github.com/marbaji/ralph-stack/issues` to file a report.
 - **Deliverable bug** (ralph produced bad code) — tests failing on the branch, lint/type errors, plan checkbox flipped but the referenced file missing or wrong content. Categorize as:
   - **Small + localized** (<30 min, single file) → inline fix on the same branch is fine.
   - **Multi-task / plan-shape miss** → corrective follow-up plan.
@@ -82,7 +82,7 @@ Print the `ralph-stack debrief` output verbatim as sections 1–4, then add sect
 
 ## Do not
 
-- Do not re-parse the morning-report yourself — `ralph-stack debrief` already did it. If the CLI output is wrong, that's an orchestrator bug to flag.
+- Do not re-parse the post-run-report yourself — `ralph-stack debrief` already did it. If the CLI output is wrong, that's an orchestrator bug to flag.
 - Do not invent bugs. Only interpret suspect flags that `debrief` actually surfaced.
 - Do not edit files unless the user approves a recommendation.
 - Do not run long tests or build steps inside the debrief. Read files, quick `git log`, quick `pytest --co` at most.
