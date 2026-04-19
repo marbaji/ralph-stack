@@ -117,9 +117,9 @@ ralph-stack does not re-implement the loop. It configures ralphex, adds the dete
 When a ralph run exits and something's off, the problem falls into one of three buckets. Each needs a different response — and vanilla ralph doesn't distinguish them, so you end up eyeballing logs and guessing.
 
 ### 1. Orchestrator bugs
-The wrapper itself misbehaved — ralphex, ralph-stack, or the glue between them. Example: ralphex exits ✅ COMPLETE with 0/0 checkboxes because it moved the plan to `completed/` before the checkbox counter ran. The escalation detector fires but the next iteration still runs on the same model. Stuck-dump is empty but the progress log shows 40 iterations of the same error. Not your code. Not your plan. File an issue.
+The wrapper itself misbehaved — ralphex, ralph-stack, or the glue between them. Example: ralphex exits ✅ COMPLETE with 0 checkboxes flipped because it moved the plan to `completed/` before the checkbox counter ran. The escalation detector fires but the next iteration still runs on the same model. Stuck-dump is empty but the progress log shows 40 iterations of the same error. Not your code. Not your plan. File an issue.
 
-**Mechanism:** `ralph-stack debrief` surfaces suspect-flag heuristics (0/0-with-task-commits, branch mismatch, escalation-without-model-change, all-boxes-flipped-but-INCOMPLETE). `/ralph-review` classifies each flag and drafts a ready-to-paste issue body.
+**Mechanism:** `ralph-stack debrief` surfaces suspect-flag heuristics (0-boxes-flipped-with-task-commits, branch mismatch, escalation-without-model-change, all-boxes-flipped-but-INCOMPLETE). `/ralph-review` classifies each flag and drafts a ready-to-paste issue body.
 
 ### 2. Plan bugs
 The plan was wrong — missing a step, wrong file path, contradictory instructions, a task that can't be satisfied. The agent did its job; the spec was broken. Plans in flight can be edited between runs, but completed plans stay in `plans/completed/` untouched — corrections happen in a new file.
