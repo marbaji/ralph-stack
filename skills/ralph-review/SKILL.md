@@ -34,7 +34,7 @@ Use this output verbatim as your sections 1–4. Don't re-derive what the CLI al
 ### Section 5: Bug classification
 
 For each suspect flag from Section 4, decide:
-- **Orchestrator bug** (ralph-stack Python misbehaved) — known bugs live in `<pkg>/docs/superpowers/specs/spec_*-ralph-orchestrator-bugs.md`. Check if the flag matches a known bug or is new.
+- **Orchestrator bug** (ralph-stack itself misbehaved) — the user is not expected to fix this from inside their project. Capture the flag + relevant context (morning-report excerpt, stuck-state snapshot, progress-log tail) and point the user at `https://github.com/marbaji/ralph-stack/issues` to file a report.
 - **Deliverable bug** (ralph produced bad code) — tests failing on the branch, lint/type errors, plan checkbox flipped but the referenced file missing or wrong content. Categorize as:
   - **Small + localized** (<30 min, single file) → inline fix on the same branch is fine.
   - **Multi-task / plan-shape miss** → corrective follow-up plan.
@@ -45,7 +45,7 @@ If Section 4 had no flags: "No bugs surfaced."
 
 Exactly one recommendation, prioritized:
 
-1. If orchestrator bugs surfaced: **"Fix orchestrator: <bug>. Write failing test first, then fix, then rerun."** Point at the spec file.
+1. If orchestrator bugs surfaced: **"File a ralph-stack issue for <bug>."** Give the user a ready-to-paste issue body (one-line title + the relevant debrief excerpt) and the URL `https://github.com/marbaji/ralph-stack/issues/new`. Do not propose writing tests or fixes — ralph-stack is not the user's code to fix.
 2. If guardrail drafts need action: **"Review N draft guardrail(s) above (promote/edit/delete), then `ralph-stack resume`."**
 3. If deliverable bugs surfaced: **"Draft a corrective follow-up plan for these N bugs."** Do NOT write anything yet. Ask for confirmation with this exact wording:
 

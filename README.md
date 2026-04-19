@@ -77,9 +77,9 @@ After a run completes, run `ralph-stack debrief` for a quick read-only summary, 
 
 ## Post-run workflow
 
-1. **`ralph-stack debrief`** — read-only. Prints a 4-section summary: status, what happened (tail of progress log if not COMPLETE), unverified guardrail drafts, and suspect-flag heuristics for known orchestrator bugs. Deterministic, no LLM.
-2. **`/ralph-review`** — agent layer on top. Interprets the suspect flags, classifies bugs (orchestrator vs deliverable), and offers to draft a surgical corrective follow-up plan (`plan_<date>-<prev>-fixups.md`) with preview + reasoning before writing. See `/Users/mohannadarbaji/.claude/skills/ralph-review/README.md` for the doctrine.
-3. **Orchestrator bugs** (bugs in ralph-stack itself): fix live on the ralph-stack repo. Write a regression test, commit, then launch the next run.
+1. **`ralph-stack debrief`** — read-only. Prints a 4-section summary: status, what happened (tail of progress log if not COMPLETE), unverified guardrail drafts, and suspect-flag heuristics. Deterministic, no LLM.
+2. **`/ralph-review`** — agent layer on top. Interprets the suspect flags, classifies each as an orchestrator bug (ralph-stack itself misbehaved) or a deliverable bug (ralph produced bad code), and offers to draft a surgical corrective follow-up plan (`plan_<date>-<prev>-fixups.md`) with preview + reasoning before writing.
+3. **Orchestrator bugs** (bugs in ralph-stack itself): **file an issue** at [github.com/marbaji/ralph-stack/issues](https://github.com/marbaji/ralph-stack/issues) with the debrief output attached. Don't hand-fix ralph-stack from inside your project — that's maintainer work.
 4. **Deliverable bugs** (bugs in the code ralph produced): **do not hand-fix between runs.** Use the follow-up plan. The original completed plan stays in `plans/completed/` untouched. Follows Huntley's "forward ralph loop" pattern ([ghuntley.com/loop](https://ghuntley.com/loop/)).
 5. **Pattern bugs** (ralph keeps getting the same thing wrong): fix the bug via follow-up plan AND add a rule to `tasks/lessons.md` or promote it into `combined-guardrails.md` so the next run doesn't repeat the mistake.
 
@@ -89,9 +89,9 @@ Don't edit a completed plan. If the plan was wrong and needs restructuring mid-r
 
 Post-completion corrections go in a new plan file (`plan_<date>-<prev-name>-fixups.md`), never by editing `plans/completed/`.
 
-## Orchestrator bug log
+## Reporting bugs
 
-Known orchestrator bugs live under `docs/superpowers/specs/spec_*-ralph-orchestrator-bugs.md`. New bugs surfaced during a run's debrief get appended there before the next launch.
+If `ralph-stack debrief` surfaces a suspect flag that looks like ralph-stack misbehaving (not ralph misbehaving), [open an issue](https://github.com/marbaji/ralph-stack/issues) with the debrief output. Don't try to hand-fix ralph-stack from inside a project that's using it.
 
 ## Sources
 

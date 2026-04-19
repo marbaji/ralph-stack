@@ -45,9 +45,9 @@ These are **ralph rules**, not ralph-stack inventions — sourced from Huntley, 
 - **Guardrails file = append-only memory for repeat mistakes.** Win condition: *"the same mistake never happens twice."* Source: Agrim, same post.
 - **Plan moves to `completed/` on success.** Archived, treated as done. Source: [ralphex.com](https://ralphex.com/).
 
-### Just ordinary tool hygiene (not ralph-specific)
+### Orchestrator bugs are not yours to fix
 
-- **Orchestrator bugs (bugs in ralph-stack itself) get fixed live.** Ralph-stack isn't a ralph deliverable — it's the tool that runs ralph. Write a regression test in `ralph-stack/tests/`, fix in `ralph-stack/src/`, commit with `fix(orchestrator): ...`, launch next run. This is just "fix your tools before running them" — no ralph principle involved.
+- **Ralph-stack is the tool running ralph** — it's not part of your project's deliverable. If the debrief flags a ralph-stack bug, file an issue at [github.com/marbaji/ralph-stack/issues](https://github.com/marbaji/ralph-stack/issues) with the debrief output. Don't hand-fix ralph-stack from inside your project; the skill will give you a ready-to-paste issue body.
 
 ### ralph-stack's own convention (explicitly chosen, not in canon)
 
