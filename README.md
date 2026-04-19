@@ -90,7 +90,7 @@ A **four-phase review pipeline per plan**: task execution with validation comman
 
 - **A consolidated human-readable exit report.** You piece status together from progress logs, git history, and error logs. Neither tool produces a single "here's what happened" file you can skim in 30 seconds.
 - **Model escalation when stuck.** The agent model is static per run — `--task-model` in ralphex, `RALPH_MODEL` in wiggum. If the loop gets stuck, neither automatically swaps in a higher-effort mode (e.g. Opus with maximum reasoning effort) to break through the block. Both halt and ask the human to intervene.
-- **A post-run debrief tool** that classifies anomalies as orchestrator bugs (the tool itself misbehaved) vs deliverable bugs (the code the agent produced is wrong) and drafts a surgical corrective follow-up plan.
+- **A post-run debrief tool** that classifies each anomaly into one of three buckets — orchestrator bugs (the tool misbehaved), plan bugs (the spec was wrong), agent-process bugs (the agent keeps tripping on the same landmine) — and prescribes the right response for each (file an issue, draft a surgical follow-up plan, or bind a guardrail).
 - **Combined guardrails** — per-project rules merged with your global rules into one file the loop sees every iteration, with unverified/draft rules flagged until you've reviewed them.
 
 ---
@@ -106,9 +106,30 @@ ralph-stack wraps ralphex — it inherits the full four-phase review pipeline, C
 | **Combined guardrails** — per-project + global merged into `ralph/combined-guardrails.md`, with unverified drafts flagged | added by **ralph-stack** |
 | **Stuck-state detection + model escalation** — a detector watches for thrash; on thrash, the next iteration runs on a higher-effort Claude model (e.g. Opus at maximum reasoning effort). One-shot, reverts after | added by **ralph-stack** |
 | **Post-run report** — `ralph/post-run-report.md` with status, iteration count, suspect-flag heuristics, and a recommended next action, written at exit | added by **ralph-stack** |
-| **Post-run debrief** — `ralph-stack debrief` (deterministic 4-section read) and `/ralph-review` (Claude Code skill that classifies orchestrator vs deliverable bugs and drafts a surgical follow-up plan with preview) | added by **ralph-stack** |
+| **Post-run debrief** — `ralph-stack debrief` (deterministic 4-section read) and `/ralph-review` (Claude Code skill that classifies each anomaly into one of the [three bug buckets](#three-kinds-of-bugs-three-mechanisms) and drafts a surgical follow-up plan with preview) | added by **ralph-stack** |
 
 ralph-stack does not re-implement the loop. It configures ralphex, adds the detector + escalation hook, renders the combined guardrails, writes the exit artifact, and ships the debrief tooling.
+
+---
+
+## Three kinds of bugs, three mechanisms
+
+When a ralph run exits and something's off, the problem falls into one of three buckets. Each needs a different response — and vanilla ralph doesn't distinguish them, so you end up eyeballing logs and guessing.
+
+### 1. Orchestrator bugs
+The wrapper itself misbehaved — ralphex, ralph-stack, or the glue between them. Example: ralphex exits ✅ COMPLETE with 0/0 checkboxes because it moved the plan to `completed/` before the checkbox counter ran. The escalation detector fires but the next iteration still runs on the same model. Stuck-dump is empty but the progress log shows 40 iterations of the same error. Not your code. Not your plan. File an issue.
+
+**Mechanism:** `ralph-stack debrief` surfaces suspect-flag heuristics (0/0-with-task-commits, branch mismatch, escalation-without-model-change, all-boxes-flipped-but-INCOMPLETE). `/ralph-review` classifies each flag and drafts a ready-to-paste issue body.
+
+### 2. Plan bugs
+The plan was wrong — missing a step, wrong file path, contradictory instructions, a task that can't be satisfied. The agent did its job; the spec was broken. Plans in flight can be edited between runs, but completed plans stay in `plans/completed/` untouched — corrections happen in a new file.
+
+**Mechanism:** `/ralph-review` drafts a surgical `plan_<date>-<prev>-fixups.md` — one checkbox per bug, with file paths, one-line fix, one-line why — shows the full file and reasoning before writing. You review, `ralph-stack run <new-plan>`. This is Huntley's [forward ralph loop](https://ghuntley.com/loop/), structured.
+
+### 3. Agent-process bugs
+Plan was fine, orchestrator was fine, but the agent keeps tripping on the same landmines: picks the wrong tool, re-enters a dead-end, forgets a project convention three iterations in a row, gets stuck in a local minimum it can't climb out of. Fixup plans won't help — the next run will re-make the pattern. You need durable memory that binds every iteration, and compute that can punch through blocks the current model can't.
+
+**Mechanism:** (a) Combined guardrails — per-project `tasks/lessons.md` + global `~/.ralph/guardrails.md` merged into `ralph/combined-guardrails.md` the loop sees every iteration, with auto-drafted rules flagged `## ⚠️ Unverified` until you promote them. (b) Stuck-state detection + one-shot model escalation — when the detector sees thrash, the next iteration runs on a higher-effort Claude (e.g. Opus at max reasoning), reverting after.
 
 ---
 
@@ -187,10 +208,8 @@ ralphex's own progress log lives at `../.ralphex/progress/progress-<plan>.txt` a
 ## Post-run workflow
 
 1. **`ralph-stack debrief`** — deterministic 4-section read: status, what happened, unverified guardrail drafts, suspect-flag heuristics. No LLM.
-2. **`/ralph-review`** — agent layer on top. Classifies each suspect flag as orchestrator or deliverable, drafts a follow-up plan if needed with preview + reasoning.
-3. **Orchestrator bugs** (ralph-stack itself misbehaved) → [file an issue](https://github.com/marbaji/ralph-stack/issues) with the debrief output attached. The `/ralph-review` skill will draft a ready-to-paste issue body for you; nothing is auto-filed.
-4. **Deliverable bugs** (the code ralph produced is wrong) → don't hand-fix between runs. Write a follow-up plan (`plan_<date>-<prev>-fixups.md`). The original plan stays in `plans/completed/` untouched. This is Huntley's [forward ralph loop](https://ghuntley.com/loop/).
-5. **Pattern bugs** (ralph keeps making the same mistake) → fix via follow-up plan AND add a rule to `tasks/lessons.md` or promote it into `combined-guardrails.md` so the next run sees it.
+2. **`/ralph-review`** — agent layer on top. Classifies each suspect flag into one of the [three bug buckets](#three-kinds-of-bugs-three-mechanisms) and recommends exactly one next action.
+3. If the bug is a **pattern** (same mistake across plans), the follow-up plan fixes this instance — but also write the rule into `tasks/lessons.md` or promote it into `combined-guardrails.md` so the next run sees it. Otherwise the next run re-makes the pattern.
 
 ---
 
