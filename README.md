@@ -1,60 +1,79 @@
 # ralph-stack
 
-A CLI wrapper around [ralphex](https://ralphex.com) that adds a structured human-review gate on top of the "ralph" autonomous coding loop.
+Autonomous markdown-plan execution for Claude Code. Write a plan with checkboxes, run `ralph-stack run plan.md`, walk away. The tool loops Claude against the plan until every box is checked, then leaves a readable exit report so you can triage what happened.
 
-`ralph-stack run plan.md` executes a markdown plan end-to-end without human input, then produces a debriefable exit artifact (`ralph/morning-report.md`) so you can triage what happened and decide what to do next.
+---
 
-## Why another ralph
+## The idea
 
-"Ralph" (from Geoffrey Huntley, [ghuntley.com/ralph](https://ghuntley.com/ralph/)) is a bash-loop pattern: an agent runs against a plan file with fresh context every iteration, using the filesystem + git as memory instead of a conversation. Several implementations exist already:
+Long LLM sessions forget things. Context windows fill up, memory drifts, the agent wanders. The usual fix is more supervision — interrupt, correct, re-prompt. But that means you can't walk away.
 
-| Implementation | What it does | Where ralph-stack differs |
-|---|---|---|
-| [ralphex](https://github.com/umputun/ralphex) (umputun) | The core loop in Go. Stateless iterations, plan-driven, moves plan to `completed/` on success. | ralph-stack wraps ralphex and adds a review/exit layer — it does NOT re-implement the loop. |
-| [ralph-wiggum-cursor](https://github.com/agrimsingh/ralph-wiggum-cursor) (Agrim Singh) | Cursor port. Adds stream parsing, token tracking, gutter detection. | Targets Cursor, not Claude Code. Ralph-stack targets Claude Code (via ralphex). |
-| [Ralph Playbook](https://claytonfarr.github.io/ralph-playbook/) (Clayton Farr) | A set of conventions + prompts, no tooling. | Ralph-stack is actual tooling. |
-| Raw ralphex | You read `.ralphex/progress/*.txt` yourself after a run. | Ralph-stack generates `morning-report.md`, tracks stuck-state, renders combined guardrails, and exposes a `/ralph-review` skill for post-run triage. |
+**Ralph** (from [Geoffrey Huntley](https://ghuntley.com/ralph/), popularized by [Agrim Singh](https://x.com/agrimsingh/status/2010412150918189210)) takes a different approach: **stop treating the conversation as memory. Make the filesystem the memory.**
 
-**Use ralph-stack if:**
-- You want ralph's stateless-iteration pattern.
-- You want to be able to walk away from a run and come back to a readable status artifact.
-- You want per-project + global guardrails rendered together for each run.
-- You're on Claude Code (ralph-stack delegates execution to ralphex, which wraps `claude`).
+```
+          ┌──────────────────────────────────────────┐
+          │  plan.md       the task list, checkboxes │
+          │  tasks/        scratchpad, lessons       │
+          │  guardrails.md rules the loop must obey  │
+          │  git           history of every change   │
+          └──────────────────────────────────────────┘
+                              ▲
+                reads / writes │
+                              ▼
+                   ┌──────────────────────┐
+                   │  Fresh Claude session │  new session every iteration
+                   │  one iteration        │  no conversation memory
+                   └──────────────────────┘
+                              │
+                              ▼
+                      all boxes checked?
+                        │           │
+                        no          yes ──▶ done
+                        │
+                        └──▶ loop
+```
 
-**Use something else if:**
-- You're on Cursor → use ralph-wiggum-cursor.
-- You want the minimal raw loop with no wrapper → use ralphex directly.
+Each iteration reads the plan fresh, does one checkbox's worth of work, commits, exits. No accumulated confusion, no context bleed. When the loop makes the same mistake twice, you write a rule into a guardrails file — the filesystem survives, the conversation doesn't, so the next iteration sees it.
 
-## Core concepts
+### The three rules
 
-### What comes from ralph canon
+Paraphrased from Agrim's [Ralph For Idiots](https://x.com/agrimsingh/status/2010412150918189210):
 
-These are **not** ralph-stack inventions — they're how "ralph" works, as described by Huntley and Agrim:
+1. **Memory is the filesystem + git, not the chat.** Anything the next iteration needs to know goes in a file.
+2. **One plan, one source of truth.** You edit it before the run. During the run, iterations only flip checkboxes and commit.
+3. **The same mistake never happens twice.** If you catch the loop doing something wrong, write a rule. The rule outlives the session that noticed it.
 
-- **Stateless iterations.** Each iteration spawns a fresh Claude Code session. No conversation memory leaks across iterations. Source: [ralphex.com](https://ralphex.com/) — *"Fresh Context: Each task executes in a new Claude session."*
-- **Plan as single source of truth.** The plan markdown file with GFM checkboxes is what survives rotations. Source: [Agrim Singh, "Ralph For Idiots"](https://x.com/agrimsingh/status/2010412150918189210) — *"The memory is not the chat. The memory is the filesystem + git."*
-- **Guardrails file as append-only memory.** When the loop makes a repeat mistake, write a rule into `guardrails.md` so the next iteration sees it. Source: Agrim, same post — *"the same mistake never happens twice."*
-- **Plan moves to `completed/` on success.** Completed plans are archived under `docs/plans/completed/`. Source: [ralphex.com](https://ralphex.com/).
+---
 
-### What ralph-stack adds on top
+## What ralph-stack adds
 
-- **`ralph/morning-report.md`** — exit artifact summarizing status, checkbox count, iterations, branch. Readable by a human after the run.
-- **`ralph/stuck-state.json`** — detector state across escalations.
-- **`ralph/combined-guardrails.md`** — per-project + global guardrails rendered into one file per run, with unverified drafts flagged.
-- **Three-gate review pipeline** (Claude review 0 with 5 sub-agents, Claude review 1 with 2 sub-agents, external Codex review) — ralphex's native review hooks, configured by ralph-stack.
-- **Escalation model swap** — when the detector sees thrash, the wrapper script swaps to a higher-effort Claude model for the next iteration.
-- **`/ralph-review` skill** — post-run debrief that reads morning-report, flags unverified guardrail drafts, and recommends the next action.
+Ralph is a pattern. The cleanest implementation is [ralphex](https://github.com/umputun/ralphex) — a Go CLI that runs the loop. Ralph-stack wraps ralphex and adds the piece that's missing if you want to run something overnight and review it in the morning: **a human-review exit surface.**
+
+- **Exit artifact (`ralph/morning-report.md`)** — when the run ends (done, stuck, or halted), a readable summary is written: status, what happened, iteration count, suspect flags. Skim it in 30 seconds.
+- **Stuck-state detection** — a deterministic detector watches for thrash (repeating errors, no progress). On thrash, it escalates.
+- **Escalation via model swap** — on thrash, the next iteration runs on a higher-effort Claude model. One-shot, then reverts.
+- **Combined guardrails** — per-project rules and your global rules render into one file the loop sees every iteration. Unverified new drafts are flagged so you don't promote an untested rule unreviewed.
+- **Three-gate review pipeline** — ralphex's native review hooks, pre-configured: Claude review 0 (5 sub-agents), Claude review 1 (2 sub-agents), external Codex review.
+- **`/ralph-review` skill** — a post-run Claude Code skill that reads the debrief, classifies suspect flags as orchestrator vs deliverable bugs, and optionally drafts a surgical corrective follow-up plan.
+
+Ralph-stack does not re-implement the loop itself. Stateless iterations, plan-completion archiving, and the review hooks all come from ralphex.
+
+---
 
 ## Install
 
 ```sh
-brew install umputun/apps/ralphex    # prerequisite
-./install.sh                          # installs ralph-stack into .venv + $PATH
+brew install umputun/apps/ralphex    # the underlying loop
+git clone https://github.com/marbaji/ralph-stack
+cd ralph-stack
+./install.sh                         # installs ralph-stack into .venv + $PATH
 ```
 
-Requires `claude` (Claude Code CLI) and `codex` (for ralphex's external-review gate).
+Requires the [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) (`claude`) and [Codex CLI](https://github.com/openai/codex) (`codex`) for ralphex's external-review gate.
 
-## Commands
+---
+
+## Usage
 
 ```sh
 ralph-stack init [plan.md]       # scaffold ralph/ dir + per-project guardrails
@@ -65,44 +84,67 @@ ralph-stack status               # one-shot KV dump of stuck-state (mid-run peek
 ralph-stack debrief              # read-only 4-section post-run summary
 ```
 
-After a run completes, run `ralph-stack debrief` for a quick read-only summary, then invoke `/ralph-review` for agent-assisted bug triage and optional follow-up-plan drafting.
+Typical flow:
 
-## Runtime artifacts (`./ralph/`)
+```sh
+ralph-stack init docs/plans/my-feature.md
+ralph-stack run  docs/plans/my-feature.md
+# walk away
+
+# next morning:
+ralph-stack debrief
+# if there's anything to triage:
+claude   → /ralph-review
+```
+
+---
+
+## Runtime artifacts
+
+Everything ralph-stack writes lives in `./ralph/` in your project:
 
 - `morning-report.md` — status + recommended next action (written at exit)
 - `stuck-state.json` — detector state (iteration, model, escalations)
 - `combined-guardrails.md` — rendered guardrails (per-project + global)
 - `next-iter-model.txt` — one-shot model override for the next iteration (cleared after read)
-- `../.ralphex/progress/progress-<plan>.txt` — ralphex's per-plan progress log (iteration narratives)
+
+Ralphex's own progress log lives at `../.ralphex/progress/progress-<plan>.txt` and captures per-iteration narratives.
+
+---
 
 ## Post-run workflow
 
-1. **`ralph-stack debrief`** — read-only. Prints a 4-section summary: status, what happened (tail of progress log if not COMPLETE), unverified guardrail drafts, and suspect-flag heuristics. Deterministic, no LLM.
-2. **`/ralph-review`** — agent layer on top. Interprets the suspect flags, classifies each as an orchestrator bug (ralph-stack itself misbehaved) or a deliverable bug (ralph produced bad code), and offers to draft a surgical corrective follow-up plan (`plan_<date>-<prev>-fixups.md`) with preview + reasoning before writing.
-3. **Orchestrator bugs** (bugs in ralph-stack itself): **file an issue** at [github.com/marbaji/ralph-stack/issues](https://github.com/marbaji/ralph-stack/issues) with the debrief output attached. Don't hand-fix ralph-stack from inside your project — that's maintainer work.
-4. **Deliverable bugs** (bugs in the code ralph produced): **do not hand-fix between runs.** Use the follow-up plan. The original completed plan stays in `plans/completed/` untouched. Follows Huntley's "forward ralph loop" pattern ([ghuntley.com/loop](https://ghuntley.com/loop/)).
-5. **Pattern bugs** (ralph keeps getting the same thing wrong): fix the bug via follow-up plan AND add a rule to `tasks/lessons.md` or promote it into `combined-guardrails.md` so the next run doesn't repeat the mistake.
+1. **`ralph-stack debrief`** — deterministic 4-section read: status, what happened, unverified guardrail drafts, suspect-flag heuristics. No LLM.
+2. **`/ralph-review`** — agent layer on top. Classifies each suspect flag as orchestrator or deliverable, drafts a follow-up plan if needed with preview + reasoning.
+3. **Orchestrator bugs** (ralph-stack itself misbehaved) → [file an issue](https://github.com/marbaji/ralph-stack/issues) with the debrief output attached. Don't hand-fix ralph-stack from inside your project.
+4. **Deliverable bugs** (the code ralph produced is wrong) → don't hand-fix between runs. Write a follow-up plan (`plan_<date>-<prev>-fixups.md`). The original plan stays in `plans/completed/` untouched. This is Huntley's [forward ralph loop](https://ghuntley.com/loop/).
+5. **Pattern bugs** (ralph keeps making the same mistake) → fix via follow-up plan AND add a rule to `tasks/lessons.md` or promote it into `combined-guardrails.md` so the next run sees it.
+
+---
 
 ## Plan immutability
 
-Don't edit a completed plan. If the plan was wrong and needs restructuring mid-run: `ralph-stack stop`, edit the plan, `ralph-stack run` — ralph picks up from the current checkbox state (no duplicate work because it just reads the file).
+A plan in flight is a living document — if you realize mid-run it's wrong: `ralph-stack stop`, edit the plan, `ralph-stack run`. The loop picks up from the current checkbox state with no duplicate work.
 
-Post-completion corrections go in a new plan file (`plan_<date>-<prev-name>-fixups.md`), never by editing `plans/completed/`.
+A completed plan is frozen. Corrections happen in a new `plan_<date>-<prev>-fixups.md`, never by editing `plans/completed/`.
 
-## Reporting bugs
+---
 
-If `ralph-stack debrief` surfaces a suspect flag that looks like ralph-stack misbehaving (not ralph misbehaving), [open an issue](https://github.com/marbaji/ralph-stack/issues) with the debrief output. Don't try to hand-fix ralph-stack from inside a project that's using it.
+## Credits and prior work
 
-## Sources
+Ralph-stack builds on work by others. If ralph-stack isn't the right fit, one of these probably is:
 
-- [Geoffrey Huntley — Ralph Wiggum as a software engineer](https://ghuntley.com/ralph/) (the original)
-- [Geoffrey Huntley — everything is a ralph loop](https://ghuntley.com/loop/) (source of the "forward ralph loop" term)
-- [Agrim Singh — Ralph For Idiots](https://x.com/agrimsingh/status/2010412150918189210)
-- [ralphex (umputun/ralphex)](https://github.com/umputun/ralphex) — the loop ralph-stack wraps
-- [ralphex.com](https://ralphex.com/) — landing page
-- [ralph-wiggum-cursor (agrimsingh)](https://github.com/agrimsingh/ralph-wiggum-cursor) — Cursor port
-- [The Ralph Playbook (Clayton Farr)](https://claytonfarr.github.io/ralph-playbook/) — convention notes
+| Project | What it is |
+|---|---|
+| [Geoffrey Huntley — Ralph Wiggum as a software engineer](https://ghuntley.com/ralph/) | The original pattern. Everything else descends from here. |
+| [Geoffrey Huntley — everything is a ralph loop](https://ghuntley.com/loop/) | Source of the "forward ralph loop" term for post-run corrections. |
+| [Agrim Singh — Ralph For Idiots](https://x.com/agrimsingh/status/2010412150918189210) | Plain-language explanation of the core rules. The best starting point. |
+| [ralphex (umputun)](https://github.com/umputun/ralphex) | The loop itself, in Go. Ralph-stack wraps this. |
+| [ralph-wiggum-cursor (Agrim Singh)](https://github.com/agrimsingh/ralph-wiggum-cursor) | Cursor port. Use this if you're on Cursor, not Claude Code. |
+| [The Ralph Playbook (Clayton Farr)](https://claytonfarr.github.io/ralph-playbook/) | Conventions + prompts, no tooling. |
 
-## Spec / design notes
+---
 
-See `SPIKE-NOTES.md` for the Phase 0 spike that confirmed ralphex's CLI shape, model-override mechanism, and escalation semantics for v0.1.
+## Design notes
+
+See [`SPIKE-NOTES.md`](SPIKE-NOTES.md) for the Phase 0 spike that confirmed ralphex's CLI shape, model-override mechanism, and escalation semantics for v0.1.
