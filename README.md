@@ -54,7 +54,7 @@ That proves the idea. It's not enough to actually use. The rest of this README i
 
 ## Prior work
 
-Two serious implementations already exist:
+These are two popular implementations that already exist:
 
 - **[ralphex](https://github.com/umputun/ralphex)** (umputun, Go, targets Claude Code)
 - **[ralph-wiggum-cursor](https://github.com/agrimsingh/ralph-wiggum-cursor)** (Agrim Singh, Bash, targets Cursor)
