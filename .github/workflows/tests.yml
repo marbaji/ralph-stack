@@ -1,0 +1,19 @@
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e . pytest pyyaml
+      # `tests` named explicitly rather than relying on pyproject's testpaths: the checker reads it.
+      - run: python3 -m pytest tests -q
